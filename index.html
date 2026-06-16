@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>SportPulse — Your Schedule</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0c0f14;--surface:#141820;--border:#242a35;--muted:#3d4557;--dim:#6b7590;
+    --text:#e8ecf4;--subtext:#8a93aa;--cricket:#22c55e;--f1:#ef4444;--tennis:#facc15;--football:#3b82f6;
+    --radius:12px;--mono:'DM Mono',monospace;--sans:'Inter',sans-serif;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{font-size:16px;-webkit-text-size-adjust:100%}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100dvh;padding-bottom:env(safe-area-inset-bottom)}
+
+  header{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:1px solid var(--border);padding:14px 16px 12px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .logo{display:flex;align-items:baseline;gap:8px}
+  .logo-name{font-family:var(--mono);font-weight:500;font-size:1.05rem;letter-spacing:-.02em}
+  .logo-dot{width:7px;height:7px;border-radius:50%;background:var(--cricket);display:inline-block;margin-bottom:2px;animation:pulse-dot 2.4s ease-in-out infinite}
+  @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
+  .tz-badge{font-family:var(--mono);font-size:.68rem;color:var(--dim);background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:3px 7px;white-space:nowrap}
+
+  .tabs-wrap{overflow-x:auto;scrollbar-width:none;padding:12px 16px 0;border-bottom:1px solid var(--border);-webkit-overflow-scrolling:touch}
+  .tabs-wrap::-webkit-scrollbar{display:none}
+  .tabs{display:flex;gap:4px;padding-bottom:12px;width:max-content}
+  .tab{font-family:var(--mono);font-size:.72rem;font-weight:500;padding:6px 14px;border-radius:100px;border:1px solid var(--border);background:transparent;color:var(--subtext);cursor:pointer;white-space:nowrap;transition:all .15s;letter-spacing:.03em;text-transform:uppercase}
+  .tab:hover{border-color:var(--muted);color:var(--text)}
+  .tab.active[data-sport="all"]{background:var(--text);color:var(--bg);border-color:var(--text)}
+  .tab.active[data-sport="cricket"]{background:var(--cricket);color:#000;border-color:var(--cricket)}
+  .tab.active[data-sport="f1"]{background:var(--f1);color:#fff;border-color:var(--f1)}
+  .tab.active[data-sport="tennis"]{background:var(--tennis);color:#000;border-color:var(--tennis)}
+  .tab.active[data-sport="football"]{background:var(--football);color:#fff;border-color:var(--football)}
+
+  .fetch-bar{padding:14px 16px;display:flex;gap:10px;align-items:center}
+  .fetch-btn{flex:1;font-family:var(--mono);font-size:.8rem;font-weight:500;letter-spacing:.04em;text-transform:uppercase;padding:12px 20px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s}
+  .fetch-btn:hover:not(:disabled){border-color:var(--cricket);color:var(--cricket)}
+  .fetch-btn:disabled{opacity:.5;cursor:not-allowed}
+  .fetch-btn .spinner{width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;display:none}
+  .fetch-btn.loading .spinner{display:block}
+  .fetch-btn.loading .btn-text{opacity:.6}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .range-select{font-family:var(--mono);font-size:.75rem;background:var(--surface);color:var(--subtext);border:1px solid var(--border);border-radius:var(--radius);padding:10px;cursor:pointer;appearance:none;-webkit-appearance:none;min-width:100px}
+
+  .progress-bar-wrap{padding:0 16px 12px;display:none}
+  .progress-bar-wrap.visible{display:block}
+  .progress-track{background:var(--border);border-radius:4px;height:3px;overflow:hidden}
+  .progress-fill{height:100%;background:var(--cricket);border-radius:4px;transition:width .3s ease;width:0%}
+  .progress-label{font-family:var(--mono);font-size:.65rem;color:var(--dim);margin-top:6px}
+
+  main{padding:0 16px 24px}
+  .date-group{margin-bottom:4px}
+  .date-label{font-family:var(--mono);font-size:.68rem;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;padding:18px 0 8px;display:flex;align-items:center;gap:10px}
+  .date-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+  .event-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:8px;display:grid;grid-template-columns:36px 1fr auto;gap:12px;align-items:start;transition:border-color .15s}
+  .event-card:hover{border-color:var(--muted)}
+  .event-card.cricket{border-left:3px solid var(--cricket)}
+  .event-card.f1{border-left:3px solid var(--f1)}
+  .event-card.tennis{border-left:3px solid var(--tennis)}
+  .event-card.football{border-left:3px solid var(--football)}
+  .sport-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+  .sport-icon.cricket{background:rgba(34,197,94,.12)}
+  .sport-icon.f1{background:rgba(239,68,68,.12)}
+  .sport-icon.tennis{background:rgba(250,204,21,.12)}
+  .sport-icon.football{background:rgba(59,130,246,.12)}
+  .event-body{min-width:0}
+  .event-name{font-size:.88rem;font-weight:600;color:var(--text);line-height:1.3;margin-bottom:3px}
+  .event-comp{font-size:.72rem;color:var(--subtext);margin-bottom:8px}
+  .event-time{font-family:var(--mono);font-size:.85rem;font-weight:500;text-align:right;flex-shrink:0}
+  .time-local{color:var(--text);display:block}
+  .time-label{font-size:.6rem;color:var(--dim);letter-spacing:.06em;text-transform:uppercase}
+
+  .broadcast-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+  .bc-item{background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:5px 8px;display:flex;align-items:center;gap:6px}
+  .bc-flag{font-size:.85rem;flex-shrink:0}
+  .bc-info{min-width:0}
+  .bc-country{font-size:.58rem;color:var(--dim);letter-spacing:.06em;text-transform:uppercase;line-height:1;margin-bottom:1px}
+  .bc-channel{font-family:var(--mono);font-size:.7rem;color:var(--subtext);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  .state-msg{text-align:center;padding:60px 20px;color:var(--dim);font-size:.85rem;line-height:1.7}
+  .state-msg .icon{font-size:2.5rem;margin-bottom:12px}
+  .last-updated{font-family:var(--mono);font-size:.65rem;color:var(--muted);text-align:center;padding:8px 0 4px}
+  .disclaimer{font-size:.65rem;color:var(--muted);text-align:center;padding:4px 16px 16px;line-height:1.5}
+  .source-tag{display:inline-block;font-family:var(--mono);font-size:.58rem;color:var(--dim);background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:middle}
+  @media(max-width:360px){.broadcast-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><span class="logo-dot"></span><span class="logo-name">SportPulse</span></div>
+  <span class="tz-badge" id="tzBadge">detecting…</span>
+</header>
+
+<div class="tabs-wrap">
+  <div class="tabs">
+    <button class="tab active" data-sport="all">All</button>
+    <button class="tab" data-sport="cricket">🏏 Cricket</button>
+    <button class="tab" data-sport="f1">🏎 F1</button>
+    <button class="tab" data-sport="tennis">🎾 Tennis</button>
+    <button class="tab" data-sport="football">⚽ Football</button>
+  </div>
+</div>
+
+<div class="fetch-bar">
+  <select class="range-select" id="rangeSelect">
+    <option value="7">Next 7 days</option>
+    <option value="14" selected>Next 14 days</option>
+    <option value="30">Next 30 days</option>
+  </select>
+  <button class="fetch-btn" id="fetchBtn">
+    <div class="spinner"></div>
+    <span class="btn-text">Fetch schedule</span>
+  </button>
+</div>
+
+<div class="progress-bar-wrap" id="progressWrap">
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="progress-label" id="progressLabel">Loading…</div>
+</div>
+
+<main id="main">
+  <div class="state-msg">
+    <div class="icon">📡</div>
+    Tap <strong>Fetch schedule</strong> to load upcoming events.<br>
+    Live data · No API key · No cost · No login
+  </div>
+</main>
+
+<div class="last-updated" id="lastUpdated"></div>
+<div class="disclaimer" id="disclaimer"></div>
+
+<script>
+// ── BROADCAST (hardcoded per competition type) ────────────────────────────────
+const BC = {
+  cricket_test:    {uk:'Sky Sports Cricket',      us:'Willow TV',              aus:'Fox Cricket, Channel 9',    canada:'Willow TV'},
+  cricket_ipl:     {uk:'Sky Sports Cricket',      us:'JioCinema (online)',     aus:'Fox Cricket',               canada:'N/A'},
+  cricket_icc:     {uk:'Sky Sports Cricket',      us:'Willow TV',              aus:'Fox Cricket, Channel 9',    canada:'Willow TV'},
+  cricket_odi:     {uk:'Sky Sports Cricket',      us:'Willow TV',              aus:'Fox Cricket',               canada:'Willow TV'},
+  cricket_t20i:    {uk:'Sky Sports Cricket',      us:'Willow TV',              aus:'Fox Cricket',               canada:'Willow TV'},
+  f1_race:         {uk:'Sky Sports F1, C4',       us:'ESPN',                   aus:'Fox Sports 506',            canada:'TSN, RDS'},
+  f1_qualifying:   {uk:'Sky Sports F1, C4',       us:'ESPN',                   aus:'Fox Sports 506',            canada:'TSN, RDS'},
+  f1_sprint:       {uk:'Sky Sports F1',           us:'ESPN',                   aus:'Fox Sports 506',            canada:'TSN'},
+  f1_practice:     {uk:'Sky Sports F1',           us:'ESPN+',                  aus:'Fox Sports 506',            canada:'TSN+'},
+  tennis_ao:       {uk:'Eurosport, Discovery+',   us:'ESPN, Tennis Channel',   aus:'Channel 9, Stan Sport',     canada:'TSN, RDS'},
+  tennis_fo:       {uk:'Eurosport, ITV4',         us:'NBC, Peacock, Tennis Ch',aus:'Stan Sport',                canada:'TSN'},
+  tennis_wimbledon:{uk:'BBC One/Two, Sky Sports', us:'ESPN',                   aus:'Stan Sport',                canada:'TSN'},
+  tennis_uso:      {uk:'Sky Sports Tennis',       us:'ESPN, ESPN+',            aus:'Stan Sport, ESPN',          canada:'TSN'},
+  tennis_masters:  {uk:'Sky Sports, Amazon Prime',us:'Tennis Channel, ESPN+',  aus:'Stan Sport',                canada:'TSN'},
+  football_wc:     {uk:'ITV, BBC',                us:'Fox, FS1, Telemundo',    aus:'SBS, Optus Sport',          canada:'CTV, TSN, RDS'},
+  football_euros:  {uk:'ITV, BBC, Channel 4',     us:'HBO Max, TNT',           aus:'Optus Sport',               canada:'TSN, CTV'},
+};
+
+// ── LEAGUE CONFIG ─────────────────────────────────────────────────────────────
+const TSDB = 'https://www.thesportsdb.com/api/v1/json/123';
+
+const CRICKET_LEAGUES = [
+  {id:'4646',name:'ICC Cricket World Cup',      bcKey:'cricket_icc'},
+  {id:'4659',name:'Indian Premier League',       bcKey:'cricket_ipl'},
+  {id:'4648',name:'ICC World Twenty20',          bcKey:'cricket_icc'},
+  {id:'4649',name:'ICC Champions Trophy',        bcKey:'cricket_icc'},
+  {id:'4655',name:'Test Cricket',                bcKey:'cricket_test'},
+  {id:'4652',name:'International T20',           bcKey:'cricket_t20i'},
+  {id:'4651',name:'One Day Internationals',      bcKey:'cricket_odi'},
+];
+const TENNIS_LEAGUES = [
+  {id:'4681',name:'Australian Open',   bcKey:'tennis_ao'},
+  {id:'4680',name:'French Open',       bcKey:'tennis_fo'},
+  {id:'4682',name:'Wimbledon',         bcKey:'tennis_wimbledon'},
+  {id:'4683',name:'US Open Tennis',   bcKey:'tennis_uso'},
+  {id:'4684',name:'WTA Tour',          bcKey:'tennis_masters'},
+  {id:'4685',name:'ATP Tour',          bcKey:'tennis_masters'},
+];
+const FOOTBALL_LEAGUES = [
+  {id:'4607',name:'FIFA World Cup',             bcKey:'football_wc'},
+  {id:'4608',name:'UEFA European Championship', bcKey:'football_euros'},
+];
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let allEvents   = [];
+let activeSport = 'all';
+const userTZ    = Intl.DateTimeFormat().resolvedOptions().timeZone;
+document.getElementById('tzBadge').textContent = userTZ.replace(/_/g,' ');
+
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    activeSport = btn.dataset.sport;
+    renderEvents();
+  });
+});
+document.getElementById('fetchBtn').addEventListener('click', fetchAll);
+
+// ── PROGRESS ──────────────────────────────────────────────────────────────────
+function setProgress(pct, label) {
+  document.getElementById('progressWrap').classList.add('visible');
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = label;
+}
+function hideProgress() { document.getElementById('progressWrap').classList.remove('visible'); }
+
+// ── MAIN FETCH ────────────────────────────────────────────────────────────────
+async function fetchAll() {
+  const btn  = document.getElementById('fetchBtn');
+  const days = parseInt(document.getElementById('rangeSelect').value);
+  btn.classList.add('loading'); btn.disabled = true;
+  btn.querySelector('.btn-text').textContent = 'Fetching…';
+  allEvents = [];
+
+  try {
+    const now    = new Date();
+    const cutoff = new Date(now.getTime() + days * 86400000);
+
+    setProgress(5,  'Fetching F1 sessions…');
+    allEvents.push(...await fetchF1(now, cutoff));
+
+    setProgress(30, 'Fetching cricket fixtures…');
+    allEvents.push(...await fetchTSDB(CRICKET_LEAGUES, 'cricket', now, cutoff));
+
+    setProgress(60, 'Fetching tennis fixtures…');
+    allEvents.push(...await fetchTSDB(TENNIS_LEAGUES, 'tennis', now, cutoff));
+
+    setProgress(82, 'Fetching football fixtures…');
+    allEvents.push(...await fetchTSDB(FOOTBALL_LEAGUES, 'football', now, cutoff));
+
+    setProgress(100, 'Done');
+    allEvents.sort((a,b) => new Date(a.datetime_utc) - new Date(b.datetime_utc));
+
+    const ts = new Date();
+    document.getElementById('lastUpdated').textContent =
+      `Updated ${ts.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} · ${ts.toLocaleDateString([],{day:'numeric',month:'short'})}`;
+    document.getElementById('disclaimer').textContent =
+      'Sources: OpenF1 (F1 sessions) · TheSportsDB (Cricket, Tennis, Football). Broadcast info is hardcoded per competition — verify closer to event.';
+
+    renderEvents();
+    setTimeout(hideProgress, 900);
+
+  } catch(err) {
+    hideProgress();
+    document.getElementById('main').innerHTML = `
+      <div class="state-msg"><div class="icon">⚠️</div>
+      Could not load schedule.<br>
+      <small style="color:var(--muted)">${escHtml(err.message)}</small><br><br>
+      <small>If opening locally as a file, some browsers block cross-origin requests.<br>Host on GitHub Pages for best results.</small>
+      </div>`;
+  } finally {
+    btn.classList.remove('loading'); btn.disabled = false;
+    btn.querySelector('.btn-text').textContent = 'Refresh';
+  }
+}
+
+// ── OPENF1 ────────────────────────────────────────────────────────────────────
+async function fetchF1(from, to) {
+  const year = from.getFullYear();
+  // Also check next year if window spans year boundary
+  const years = [year];
+  if (to.getFullYear() !== year) years.push(to.getFullYear());
+
+  const events = [];
+  const seen   = new Set();
+
+  for (const y of years) {
+    const res = await fetch(`https://api.openf1.org/v1/sessions?year=${y}`);
+    if (!res.ok) continue;
+    const sessions = await res.json();
+
+    for (const s of sessions) {
+      const dt = new Date(s.date_start);
+      if (isNaN(dt) || dt < from || dt > to) continue;
+
+      const stype = (s.session_type || s.session_name || '').toLowerCase();
+      let bcKey = 'f1_race';
+      if (stype.includes('qualifying'))  bcKey = 'f1_qualifying';
+      else if (stype.includes('sprint')) bcKey = 'f1_sprint';
+      else if (stype.includes('practice')) bcKey = 'f1_practice';
+
+      const label = s.session_name || s.session_type || 'Session';
+      const name  = `${s.country_name || s.location || 'GP'} — ${label}`;
+      if (seen.has(s.session_key)) continue;
+      seen.add(s.session_key);
+
+      events.push({
+        id: `f1-${s.session_key}`, sport:'f1', name,
+        competition:`Formula 1 ${y}`,
+        datetime_utc: s.date_start,
+        venue: s.location || s.country_name || '',
+        broadcast: BC[bcKey],
+        source:'OpenF1',
+      });
+    }
+  }
+  return events;
+}
+
+// ── THESPORTSDB ───────────────────────────────────────────────────────────────
+async function fetchTSDB(leagues, sport, from, to) {
+  const events = [];
+  const seen   = new Set();
+
+  await Promise.allSettled(leagues.map(async league => {
+    try {
+      const res  = await fetch(`${TSDB}/eventsnextleague.php?id=${league.id}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data.events) return;
+
+      for (const ev of data.events) {
+        const dateStr = ev.dateEvent;
+        const timeStr = ev.strTime || '00:00:00';
+        if (!dateStr) continue;
+        const dt = new Date(`${dateStr}T${timeStr}Z`);
+        if (isNaN(dt) || dt < from || dt > to) continue;
+        if (seen.has(ev.idEvent)) continue;
+        seen.add(ev.idEvent);
+
+        let bcKey = league.bcKey;
+        if (sport === 'tennis') {
+          const n = (ev.strEvent || ev.strLeague || '').toLowerCase();
+          if (n.includes('australian')) bcKey = 'tennis_ao';
+          else if (n.includes('french') || n.includes('roland')) bcKey = 'tennis_fo';
+          else if (n.includes('wimbledon')) bcKey = 'tennis_wimbledon';
+          else if (n.includes('us open')) bcKey = 'tennis_uso';
+        }
+
+        events.push({
+          id: `tsdb-${ev.idEvent}`, sport,
+          name: ev.strEvent || [ev.strHomeTeam, ev.strAwayTeam].filter(Boolean).join(' vs '),
+          competition: ev.strLeague || league.name,
+          datetime_utc: dt.toISOString(),
+          venue: ev.strVenue || ev.strCountry || '',
+          broadcast: BC[bcKey] || {uk:'TBC',us:'TBC',aus:'TBC',canada:'TBC'},
+          source:'TheSportsDB',
+        });
+      }
+    } catch { /* skip failed league */ }
+  }));
+
+  return events;
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+const ICONS = {cricket:'🏏',f1:'🏎',tennis:'🎾',football:'⚽'};
+
+function renderEvents() {
+  const main     = document.getElementById('main');
+  const filtered = activeSport === 'all' ? allEvents : allEvents.filter(e => e.sport === activeSport);
+
+  if (!filtered.length && allEvents.length > 0) {
+    main.innerHTML = `<div class="state-msg"><div class="icon">🔍</div>No events in this window.<br><small>Try a wider range or the All tab.</small></div>`;
+    return;
+  }
+  if (!filtered.length) {
+    main.innerHTML = `<div class="state-msg"><div class="icon">📡</div>Tap <strong>Fetch schedule</strong> to load events.</div>`;
+    return;
+  }
+
+  const groups = {};
+  filtered.forEach(ev => {
+    const key = new Date(ev.datetime_utc).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+    (groups[key] = groups[key] || []).push(ev);
+  });
+
+  let html = '';
+  for (const [date, evs] of Object.entries(groups)) {
+    html += `<div class="date-group"><div class="date-label">${escHtml(date)}</div>`;
+    evs.forEach(ev => { html += card(ev); });
+    html += '</div>';
+  }
+  main.innerHTML = html;
+}
+
+function card(ev) {
+  const timeStr = new Date(ev.datetime_utc).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  const bc = ev.broadcast || {};
+  const rows = [
+    {flag:'🇬🇧',label:'UK',    val:bc.uk     ||'TBC'},
+    {flag:'🇺🇸',label:'US',    val:bc.us     ||'TBC'},
+    {flag:'🇦🇺',label:'AUS',   val:bc.aus    ||'TBC'},
+    {flag:'🇨🇦',label:'Canada',val:bc.canada ||'TBC'},
+  ];
+  const bcHtml = rows.map(r=>`
+    <div class="bc-item">
+      <span class="bc-flag">${r.flag}</span>
+      <div class="bc-info"><div class="bc-country">${r.label}</div><div class="bc-channel">${escHtml(r.val)}</div></div>
+    </div>`).join('');
+
+  return `<div class="event-card ${escHtml(ev.sport)}">
+    <div class="sport-icon ${escHtml(ev.sport)}">${ICONS[ev.sport]||'🏆'}</div>
+    <div class="event-body">
+      <div class="event-name">${escHtml(ev.name)}</div>
+      <div class="event-comp">${escHtml(ev.competition)}${ev.venue?' · '+escHtml(ev.venue):''}<span class="source-tag">${escHtml(ev.source||'')}</span></div>
+      <div class="broadcast-grid">${bcHtml}</div>
+    </div>
+    <div class="event-time"><span class="time-local">${timeStr}</span><span class="time-label">local</span></div>
+  </div>`;
+}
+
+function escHtml(s){
+  return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
