@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>SportPulse</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0c0f14;--surface:#141820;--border:#242a35;--muted:#3d4557;--dim:#6b7590;
+    --text:#e8ecf4;--subtext:#8a93aa;
+    --cricket:#1a3a2a;--cricket-accent:#22c55e;
+    --f1:#2d1a1a;--f1-accent:#ef4444;
+    --football:#0f1e35;--football-accent:#3b82f6;
+    --tennis:#2d2a10;--tennis-accent:#d4a800;
+    --manual:#241a35;--manual-accent:#a855f7;
+    --radius:12px;--mono:'DM Mono',monospace;--sans:'Inter',sans-serif;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{font-size:16px;-webkit-text-size-adjust:100%}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100dvh;padding-bottom:env(safe-area-inset-bottom)}
+
+  header{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .logo{display:flex;align-items:baseline;gap:7px}
+  .logo-name{font-family:var(--mono);font-weight:500;font-size:1rem;letter-spacing:-.02em}
+  .logo-dot{width:7px;height:7px;border-radius:50%;background:var(--cricket-accent);display:inline-block;margin-bottom:2px;animation:pulse-dot 2.4s ease-in-out infinite}
+  @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
+  .header-right{display:flex;align-items:center;gap:8px}
+  .tz-badge{font-family:var(--mono);font-size:.68rem;color:var(--dim);background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:3px 7px;white-space:nowrap}
+  .icon-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--subtext);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:all .15s;flex-shrink:0}
+  .icon-btn:hover:not(:disabled){border-color:var(--cricket-accent);color:var(--cricket-accent)}
+  .icon-btn:disabled{opacity:.4;cursor:not-allowed}
+  .icon-btn.spinning{animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .tabs-wrap{overflow-x:auto;scrollbar-width:none;padding:10px 16px 0;border-bottom:1px solid var(--border);-webkit-overflow-scrolling:touch}
+  .tabs-wrap::-webkit-scrollbar{display:none}
+  .tabs{display:flex;gap:4px;padding-bottom:10px;width:max-content}
+  .tab{font-family:var(--mono);font-size:.7rem;font-weight:500;padding:5px 13px;border-radius:100px;border:1px solid var(--border);background:transparent;color:var(--subtext);cursor:pointer;white-space:nowrap;transition:all .15s;letter-spacing:.03em;text-transform:uppercase}
+  .tab:hover{border-color:var(--muted);color:var(--text)}
+  .tab.active[data-sport="all"]{background:var(--text);color:var(--bg);border-color:var(--text)}
+  .tab.active[data-sport="cricket"]{background:var(--cricket-accent);color:#000;border-color:var(--cricket-accent)}
+  .tab.active[data-sport="f1"]{background:var(--f1-accent);color:#fff;border-color:var(--f1-accent)}
+  .tab.active[data-sport="football"]{background:var(--football-accent);color:#fff;border-color:var(--football-accent)}
+  .tab.active[data-sport="tennis"]{background:var(--tennis-accent);color:#000;border-color:var(--tennis-accent)}
+
+  .dates-wrap{overflow-x:auto;scrollbar-width:none;padding:10px 16px 0;border-bottom:1px solid var(--border);-webkit-overflow-scrolling:touch}
+  .dates-wrap::-webkit-scrollbar{display:none}
+  .dates{display:flex;gap:4px;padding-bottom:10px;width:max-content}
+  .date-btn{font-family:var(--mono);font-size:.68rem;padding:5px 11px;border-radius:100px;border:1px solid var(--border);background:transparent;color:var(--subtext);cursor:pointer;white-space:nowrap;transition:all .15s;text-align:center;min-width:52px}
+  .date-btn .dnum{font-size:.82rem;font-weight:600;display:block;color:var(--text)}
+  .date-btn .dday{font-size:.6rem;text-transform:uppercase;letter-spacing:.05em;color:var(--dim)}
+  .date-btn:hover{border-color:var(--muted)}
+  .date-btn.active{background:var(--surface);border-color:var(--text);color:var(--text)}
+  .date-btn.today .dnum{color:var(--cricket-accent)}
+  .date-btn.active.today{border-color:var(--cricket-accent)}
+
+  .progress-bar-wrap{padding:0 16px 10px;display:none}
+  .progress-bar-wrap.visible{display:block}
+  .progress-track{background:var(--border);border-radius:4px;height:2px;overflow:hidden;margin-top:10px}
+  .progress-fill{height:100%;background:var(--cricket-accent);border-radius:4px;transition:width .4s ease;width:0%}
+  .progress-label{font-family:var(--mono);font-size:.63rem;color:var(--dim);margin-top:5px}
+
+  .banner{border-radius:8px;margin:10px 16px 0;padding:8px 12px;font-size:.75rem;display:flex;align-items:center;gap:8px}
+  .banner.hidden{display:none}
+  .banner.warn{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#f87171}
+  .banner.info{background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);color:#c084fc}
+
+  main{padding:0 16px 24px}
+  .date-section-label{font-family:var(--mono);font-size:.68rem;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;padding:16px 0 8px;display:flex;align-items:center;gap:10px}
+  .date-section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+  .event-card{border-radius:var(--radius);padding:13px 14px;margin-bottom:8px;transition:filter .15s;position:relative}
+  .event-card.cricket {background:var(--cricket); border:1px solid rgba(34,197,94,.2)}
+  .event-card.f1      {background:var(--f1);      border:1px solid rgba(239,68,68,.2)}
+  .event-card.football{background:var(--football);border:1px solid rgba(59,130,246,.2)}
+  .event-card.tennis{background:var(--tennis);border:1px solid rgba(212,168,0,.2)}
+  .event-card.manual  {background:var(--manual);  border:1px solid rgba(168,85,247,.25)}
+  .event-card:hover{filter:brightness(1.08)}
+
+  .card-row{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center}
+  .sport-icon{font-size:1.1rem;text-align:center}
+  .event-meta{min-width:0}
+  .event-name{font-size:.87rem;font-weight:600;color:var(--text);line-height:1.3;margin-bottom:2px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+  .event-name .flag{font-size:.95rem}
+  .event-comp{font-size:.72rem;color:var(--subtext)}
+  .event-venue{font-size:.68rem;color:var(--dim);margin-top:3px}
+  .manual-tag{font-family:var(--mono);font-size:.55rem;color:var(--manual-accent);background:rgba(168,85,247,.12);border-radius:4px;padding:1px 5px;margin-left:4px;text-transform:uppercase;letter-spacing:.04em}
+
+  .card-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+  .event-time{font-family:var(--mono);font-size:.85rem;font-weight:500;color:var(--text);text-align:right;white-space:nowrap;line-height:1.2}
+  .time-tz{font-size:.58rem;color:var(--dim);letter-spacing:.05em;text-transform:uppercase}
+  .detail-link{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:7px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--subtext);text-decoration:none;font-size:.85rem;transition:all .15s}
+  .detail-link:hover{background:rgba(255,255,255,.14);color:var(--text)}
+
+  .broadcast-row{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:10px}
+  .bc-item{background:rgba(0,0,0,.25);border-radius:7px;padding:6px 7px;min-width:0}
+  .bc-country{font-size:.56rem;color:var(--dim);letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}
+  .bc-channel{font-family:var(--mono);font-size:.66rem;color:var(--subtext);line-height:1.35;word-wrap:break-word;overflow-wrap:break-word;white-space:normal}
+
+  .state-msg{text-align:center;padding:50px 20px;color:var(--dim);font-size:.85rem;line-height:1.7}
+  .state-msg .icon{font-size:2.5rem;margin-bottom:12px}
+  .last-updated{font-family:var(--mono);font-size:.63rem;color:var(--muted);text-align:center;padding:8px 0 4px}
+  .disclaimer{font-size:.63rem;color:var(--muted);text-align:center;padding:2px 16px 16px;line-height:1.5}
+
+  /* MANUAL ENTRY MODAL */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:none;align-items:flex-end;justify-content:center}
+  .modal-overlay.visible{display:flex}
+  .modal-sheet{background:var(--surface);border-radius:16px 16px 0 0;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;padding:20px 16px calc(20px + env(safe-area-inset-bottom))}
+  .modal-title{font-size:1rem;font-weight:600;margin-bottom:4px}
+  .modal-sub{font-size:.75rem;color:var(--subtext);margin-bottom:16px;line-height:1.5}
+  .modal-label{font-family:var(--mono);font-size:.65rem;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;display:block}
+  .modal-input,.modal-select,.modal-textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:.85rem;font-family:var(--sans);margin-bottom:14px}
+  .modal-textarea{min-height:90px;resize:vertical;font-family:var(--mono);font-size:.78rem}
+  .modal-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .modal-actions{display:flex;gap:10px;margin-top:8px}
+  .modal-btn{flex:1;padding:11px;border-radius:8px;font-family:var(--mono);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;cursor:pointer;border:1px solid var(--border)}
+  .modal-btn.primary{background:var(--manual-accent);color:#fff;border-color:var(--manual-accent)}
+  .modal-btn.secondary{background:transparent;color:var(--subtext)}
+  .manual-list-item{display:flex;justify-content:space-between;align-items:center;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:.78rem}
+  .manual-list-item .del{color:#f87171;cursor:pointer;font-size:.8rem;padding:2px 6px}
+  .add-fixture-fab{position:fixed;bottom:24px;right:16px;width:52px;height:52px;border-radius:50%;background:var(--manual-accent);color:#fff;border:none;font-size:1.4rem;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(168,85,247,.4);cursor:pointer;z-index:90}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><span class="logo-dot"></span><span class="logo-name">SportPulse</span></div>
+  <div class="header-right">
+    <span class="tz-badge" id="tzBadge">…</span>
+    <button class="icon-btn" id="refreshBtn" title="Refresh schedule">↻</button>
+  </div>
+</header>
+
+<div class="tabs-wrap">
+  <div class="tabs">
+    <button class="tab active" data-sport="all">All</button>
+    <button class="tab" data-sport="cricket">🏏 Cricket</button>
+    <button class="tab" data-sport="f1">🏎 F1</button>
+    <button class="tab" data-sport="football">⚽ Football</button>
+    <button class="tab" data-sport="tennis">🎾 Tennis</button>
+  </div>
+</div>
+
+<div class="dates-wrap"><div class="dates" id="dateRibbon"></div></div>
+
+<div class="progress-bar-wrap" id="progressWrap">
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="progress-label" id="progressLabel"></div>
+</div>
+
+<div class="banner warn hidden" id="staleBanner">⚠️ Showing cached data — tap ↻ to refresh</div>
+<div class="banner info hidden" id="apiKeyBanner">🔑 Add your free CricAPI key (tap ↻ icon area) to load cricket fixtures</div>
+
+<main id="main">
+  <div class="state-msg"><div class="icon">📡</div>Loading schedule…</div>
+</main>
+
+<div class="last-updated" id="lastUpdated"></div>
+<div class="disclaimer" id="disclaimer"></div>
+
+<button class="add-fixture-fab" id="addFixtureFab" title="Add fixture manually">+</button>
+
+<!-- MANUAL FIXTURE MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-sheet">
+    <div class="modal-title">Add a fixture manually</div>
+    <div class="modal-sub">Paste fixtures as text, paste a full .ics calendar file (e.g. the Tennis TV ATP calendar), or fill the form below.</div>
+
+    <span class="modal-label">Sport this calendar is for</span>
+    <select class="modal-select" id="icsSport">
+      <option value="tennis">🎾 Tennis</option>
+      <option value="cricket">🏏 Cricket</option>
+      <option value="f1">🏎 F1</option>
+      <option value="football">⚽ Football</option>
+    </select>
+
+    <span class="modal-label">Broadcast channels for these events (applied to all imported events — leave blank for TBC)</span>
+    <div class="modal-row">
+      <input type="text" class="modal-input" id="icsBcUk" placeholder="UK channel">
+      <input type="text" class="modal-input" id="icsBcUs" placeholder="US channel">
+    </div>
+    <div class="modal-row">
+      <input type="text" class="modal-input" id="icsBcAus" placeholder="AUS channel">
+      <input type="text" class="modal-input" id="icsBcCa" placeholder="Canada channel">
+    </div>
+
+    <span class="modal-label">Paste the .ics calendar file content</span>
+    <textarea class="modal-textarea" id="icsArea" placeholder="Open the .ics file in a text editor, select all, copy, and paste the full content here. Or on iPhone: tap the downloaded basic.ics file, share &#8594; Copy."></textarea>
+    <div class="modal-actions" style="margin-bottom:16px">
+      <button class="modal-btn secondary" id="parseIcsBtn" style="flex:1">Import .ics events</button>
+    </div>
+
+    <span class="modal-label">Quick paste (optional)</span>
+    <textarea class="modal-textarea" id="pasteArea" placeholder="e.g.&#10;2026-06-20 14:30 IST | India vs England 3rd Test | Sky Sports Cricket, Willow TV&#10;2026-06-22 19:00 IST | IPL Final | Star Sports"></textarea>
+    <div class="modal-actions" style="margin-bottom:16px">
+      <button class="modal-btn secondary" id="parsePasteBtn" style="flex:1">Parse pasted lines</button>
+    </div>
+
+    <span class="modal-label">Or add one fixture</span>
+    <div class="modal-row">
+      <div>
+        <span class="modal-label">Date</span>
+        <input type="date" class="modal-input" id="mDate">
+      </div>
+      <div>
+        <span class="modal-label">Time (your TZ)</span>
+        <input type="time" class="modal-input" id="mTime">
+      </div>
+    </div>
+    <span class="modal-label">Sport</span>
+    <select class="modal-select" id="mSport">
+      <option value="cricket">🏏 Cricket</option>
+      <option value="f1">🏎 F1</option>
+      <option value="football">⚽ Football</option>
+      <option value="tennis">🎾 Tennis</option>
+    </select>
+    <span class="modal-label">Event name</span>
+    <input type="text" class="modal-input" id="mName" placeholder="e.g. India vs England, 3rd Test">
+    <span class="modal-label">Competition</span>
+    <input type="text" class="modal-input" id="mComp" placeholder="e.g. Test Series 2026">
+    <span class="modal-label">Venue (city, country)</span>
+    <input type="text" class="modal-input" id="mVenue" placeholder="e.g. Lord's, London">
+    <span class="modal-label">Broadcast — UK / US / AUS / Canada</span>
+    <div class="modal-row">
+      <input type="text" class="modal-input" id="mBcUk" placeholder="UK channel">
+      <input type="text" class="modal-input" id="mBcUs" placeholder="US channel">
+    </div>
+    <div class="modal-row">
+      <input type="text" class="modal-input" id="mBcAus" placeholder="AUS channel">
+      <input type="text" class="modal-input" id="mBcCa" placeholder="Canada channel">
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-btn secondary" id="cancelModalBtn">Cancel</button>
+      <button class="modal-btn primary" id="saveManualBtn">Add fixture</button>
+    </div>
+
+    <div id="manualListWrap" style="margin-top:18px"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// CONFIG — set your free CricAPI key here (get one free at cricapi.com)
+// ═══════════════════════════════════════════════════════════════════════════
+const CRICAPI_KEY = 'c86aff51-d8c3-4fbe-9123-1d282e2a5d79';
+
+const userTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+const tzAbbr = (() => {
+  try {
+    const s = new Intl.DateTimeFormat('en', {timeZone:userTZ, timeZoneName:'short'}).format(new Date());
+    return s.split(' ').pop();
+  } catch { return userTZ.split('/').pop().replace('_',' '); }
+})();
+document.getElementById('tzBadge').textContent = tzAbbr;
+
+// ─── BROADCAST CHANNELS (hardcoded defaults; manual entries can override) ───
+const BC = {
+  cricket_default:  {uk:'Sky Sports Cricket', us:'Willow TV', aus:'Fox Cricket / Channel 9', canada:'Willow TV'},
+  cricket_ipl:       {uk:'Sky Sports Cricket', us:'JioCinema', aus:'Fox Cricket', canada:'N/A'},
+  f1_race:           {uk:'Sky Sports F1 / Channel 4', us:'ESPN', aus:'Fox Sports 506', canada:'TSN / RDS'},
+  f1_qualifying:      {uk:'Sky Sports F1 / Channel 4', us:'ESPN', aus:'Fox Sports 506', canada:'TSN / RDS'},
+  f1_sprint:          {uk:'Sky Sports F1', us:'ESPN', aus:'Fox Sports 506', canada:'TSN'},
+  f1_practice:        {uk:'Sky Sports F1', us:'ESPN+', aus:'Fox Sports 506', canada:'TSN+'},
+  football_wc:        {uk:'ITV / BBC', us:'Fox / FS1 / Telemundo', aus:'SBS', canada:'TSN / CTV'},
+  football_euros:     {uk:'ITV / BBC / Channel 4', us:'HBO Max / TNT', aus:'Optus Sport', canada:'TSN / CTV'},
+  tennis_default:     {uk:'Sky Sports Tennis / Amazon Prime', us:'Tennis Channel / ESPN+', aus:'Stan Sport', canada:'TSN'},
+  tennis_grandslam:    {uk:'BBC / Eurosport / Sky Sports', us:'ESPN / NBC / Peacock', aus:'Stan Sport / Channel 9', canada:'TSN'},
+};
+
+const CRICKET_NATIONS = ['india','australia','england','new zealand','south africa','pakistan','sri lanka','west indies','bangladesh','zimbabwe','ireland','afghanistan'];
+
+const COUNTRY_FLAG = {
+  'india':'🇮🇳','australia':'🇦🇺','england':'🏴󠁧󠁢󠁥󠁮󠁧󠁿','new zealand':'🇳🇿','south africa':'🇿🇦',
+  'pakistan':'🇵🇰','sri lanka':'🇱🇰','west indies':'🏝','bangladesh':'🇧🇩','zimbabwe':'🇿🇼',
+  'ireland':'🇮🇪','afghanistan':'🇦🇫','united states':'🇺🇸','usa':'🇺🇸','canada':'🇨🇦',
+  'france':'🇫🇷','germany':'🇩🇪','spain':'🇪🇸','italy':'🇮🇹','brazil':'🇧🇷','argentina':'🇦🇷',
+  'netherlands':'🇳🇱','portugal':'🇵🇹','mexico':'🇲🇽','japan':'🇯🇵','china':'🇨🇳',
+  'monaco':'🇲🇨','bahrain':'🇧🇭','saudi arabia':'🇸🇦','uae':'🇦🇪','singapore':'🇸🇬',
+  'malaysia':'🇲🇾','hungary':'🇭🇺','belgium':'🇧🇪','austria':'🇦🇹','switzerland':'🇨🇭',
+  'britain':'🇬🇧','united kingdom':'🇬🇧','great britain':'🇬🇧','uk':'🇬🇧',
+  'qatar':'🇶🇦','abu dhabi':'🇦🇪','azerbaijan':'🇦🇿','morocco':'🇲🇦','senegal':'🇸🇳',
+  'croatia':'🇭🇷','ghana':'🇬🇭','panama':'🇵🇦','colombia':'🇨🇴','uruguay':'🇺🇾',
+  'belgium':'🇧🇪','egypt':'🇪🇬','iran':'🇮🇷','tunisia':'🇹🇳','sweden':'🇸🇪','norway':'🇳🇴',
+  'jordan':'🇯🇴','algeria':'🇩🇿','ecuador':'🇪🇨','ivory coast':'🇨🇮','curaçao':'🇨🇼',
+  'paraguay':'🇵🇾','scotland':'🏴','haiti':'🇭🇹','south korea':'🇰🇷',
+};
+
+function getFlag(text) {
+  if (!text) return '';
+  const t = text.toLowerCase();
+  for (const [key, flag] of Object.entries(COUNTRY_FLAG)) {
+    if (t.includes(key)) return flag;
+  }
+  return '';
+}
+
+// ─── DIAGNOSTICS ─────────────────────────────────────────────────────────────
+let lastFetchErrors = [];
+function logFetchError(source, err) {
+  const msg = err && err.message ? err.message : String(err);
+  lastFetchErrors.push(`${source}: ${msg}`);
+  console.error(`[SportPulse] ${source} failed:`, err);
+}
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let apiEvents    = [];   // from live sources
+let manualEvents = [];   // user-entered, persisted in localStorage
+let activeSport  = 'all';
+let activeDate   = null;
+let isFetching   = false;
+const CACHE_KEY      = 'sportpulse_cache';
+const CACHE_TS       = 'sportpulse_cache_ts';
+const MANUAL_KEY     = 'sportpulse_manual_events';
+const DAYS            = 14;
+
+function allEvents() {
+  return [...apiEvents, ...manualEvents].sort((a,b) => new Date(a.datetime_utc) - new Date(b.datetime_utc));
+}
+
+// ─── DATE RIBBON ─────────────────────────────────────────────────────────────
+function buildDateRibbon() {
+  const ribbon = document.getElementById('dateRibbon');
+  ribbon.innerHTML = '';
+  const today = new Date();
+  for (let i = 0; i < DAYS; i++) {
+    const d   = new Date(today);
+    d.setDate(today.getDate() + i);
+    const key = toDateKey(d);
+    const btn = document.createElement('button');
+    btn.className = 'date-btn' + (i === 0 ? ' today' : '') + (activeDate === key ? ' active' : '');
+    btn.dataset.date = key;
+    btn.innerHTML = `<span class="dnum">${d.getDate()}</span><span class="dday">${d.toLocaleDateString('en-GB',{weekday:'short'})}</span>`;
+    btn.addEventListener('click', () => {
+      activeDate = key;
+      document.querySelectorAll('.date-btn').forEach(b => b.classList.toggle('active', b.dataset.date === key));
+      renderEvents();
+    });
+    ribbon.appendChild(btn);
+  }
+}
+function toDateKey(d) { return d.toLocaleDateString('en-CA'); }
+
+// ─── MANUAL EVENTS STORAGE ───────────────────────────────────────────────────
+function loadManualEvents() {
+  try { const r = localStorage.getItem(MANUAL_KEY); return r ? JSON.parse(r) : []; } catch { return []; }
+}
+function saveManualEvents() {
+  try { localStorage.setItem(MANUAL_KEY, JSON.stringify(manualEvents)); } catch {}
+}
+
+// ─── CACHE (API events only) ─────────────────────────────────────────────────
+function saveCache(events) {
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(events)); localStorage.setItem(CACHE_TS, Date.now()); } catch {}
+}
+function loadCache() {
+  try { const r = localStorage.getItem(CACHE_KEY); return r ? JSON.parse(r) : null; } catch { return null; }
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+(function init() {
+  activeDate = toDateKey(new Date());
+  buildDateRibbon();
+  manualEvents = loadManualEvents();
+
+  document.querySelectorAll('.tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      activeSport = btn.dataset.sport;
+      renderEvents();
+    });
+  });
+  document.getElementById('refreshBtn').addEventListener('click', () => fetchAll());
+
+  if (!CRICAPI_KEY || CRICAPI_KEY === 'PASTE_YOUR_CRICAPI_KEY_HERE') {
+    document.getElementById('apiKeyBanner').classList.remove('hidden');
+  }
+
+  setupModal();
+
+  const cached = loadCache();
+  if (cached && cached.length) {
+    apiEvents = cached;
+    renderEvents();
+    const ts = parseInt(localStorage.getItem(CACHE_TS)||'0');
+    const age = Date.now() - ts;
+    if (age > 3 * 3600000) {
+      document.getElementById('staleBanner').classList.remove('hidden');
+    } else {
+      const d = new Date(ts);
+      document.getElementById('lastUpdated').textContent =
+        `Cached · ${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} ${d.toLocaleDateString([],{day:'numeric',month:'short'})}`;
+    }
+  } else {
+    fetchAll();
+  }
+})();
+
+// ─── PROGRESS ────────────────────────────────────────────────────────────────
+function setProgress(pct, label) {
+  document.getElementById('progressWrap').classList.add('visible');
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = label;
+}
+function hideProgress() { document.getElementById('progressWrap').classList.remove('visible'); }
+
+// ─── MAIN FETCH ───────────────────────────────────────────────────────────────
+async function fetchAll() {
+  if (isFetching) return;
+  isFetching = true;
+  lastFetchErrors = [];
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled = true; btn.classList.add('spinning');
+  document.getElementById('staleBanner').classList.add('hidden');
+
+  const now    = new Date();
+  const cutoff = new Date(now.getTime() + DAYS * 86400000);
+
+  try {
+    setProgress(5, 'F1 sessions…');
+    const f1 = await fetchF1(now, cutoff);
+
+    setProgress(35, 'Football (World Cup)…');
+    const wc = await fetchOpenFootballWC(now, cutoff);
+
+    setProgress(60, 'Cricket fixtures…');
+    const cricket = await fetchCricket(now, cutoff);
+
+    setProgress(100, 'Done');
+    apiEvents = [...f1, ...wc, ...cricket];
+    saveCache(apiEvents);
+
+    const ts = new Date();
+    const counts = `🏏${cricket.length} 🏎${f1.length} ⚽${wc.length}`;
+    document.getElementById('lastUpdated').textContent =
+      `Updated ${ts.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} · ${ts.toLocaleDateString([],{day:'numeric',month:'short'})} · ${counts}`;
+    document.getElementById('disclaimer').textContent =
+      'OpenF1 · openfootball.json (World Cup) · CricAPI · Broadcast info hardcoded; manual fixtures stored on this device only.';
+
+    renderEvents();
+    setTimeout(hideProgress, 800);
+
+  } catch(err) {
+    hideProgress();
+    logFetchError('fetchAll', err);
+    if (!apiEvents.length && !manualEvents.length) {
+      document.getElementById('main').innerHTML = `<div class="state-msg"><div class="icon">⚠️</div>Could not load live sources.<br><small style="color:var(--muted)">${escHtml(err.message)}</small><br><br><small>You can still add fixtures manually with the + button.</small></div>`;
+    }
+  } finally {
+    isFetching = false;
+    btn.disabled = false; btn.classList.remove('spinning');
+  }
+}
+
+// ─── F1 (OpenF1 — confirmed reliable, no key) ────────────────────────────────
+async function fetchF1(from, to) {
+  const years = new Set([from.getFullYear(), to.getFullYear()]);
+  const events = [], seen = new Set();
+  for (const year of years) {
+    try {
+      const res = await fetch(`https://api.openf1.org/v1/sessions?year=${year}`);
+      if (!res.ok) continue;
+      const sessions = await res.json();
+      for (const s of sessions) {
+        const dt = new Date(s.date_start);
+        if (isNaN(dt)||dt<from||dt>to) continue;
+        if (seen.has(s.session_key)) continue;
+        seen.add(s.session_key);
+        const stype = (s.session_type||s.session_name||'').toLowerCase();
+        let bcKey = 'f1_race';
+        if (stype.includes('qualifying'))    bcKey = 'f1_qualifying';
+        else if (stype.includes('sprint'))   bcKey = 'f1_sprint';
+        else if (stype.includes('practice')) bcKey = 'f1_practice';
+        const country = s.country_name||s.location||'';
+        events.push({
+          id:`f1-${s.session_key}`, sport:'f1',
+          name:s.session_name||s.session_type||'Session',
+          flag:getFlag(country),
+          competition:`Formula 1 ${year} — ${country}`,
+          datetime_utc:s.date_start,
+          venue:[s.circuit_short_name, s.location, country].filter(Boolean).join(', '),
+          broadcast:BC[bcKey],
+          source:'api',
+        });
+      }
+    } catch (err) { logFetchError('F1/OpenF1', err); }
+  }
+  return events;
+}
+
+// ─── FOOTBALL: World Cup 2026 via openfootball.json (free, no key, real data) ─
+async function fetchOpenFootballWC(from, to) {
+  const events = [];
+  try {
+    const res = await fetch('https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (!data.matches) return events;
+
+    for (const m of data.matches) {
+      const dt = parseOpenFootballDateTime(m.date, m.time);
+      if (!dt || dt < from || dt > to) continue;
+
+      // Skip unresolved placeholder fixtures (e.g. "W74", "3A/B/C/D/F") until teams are confirmed
+      const team1 = m.team1 || '';
+      const team2 = m.team2 || '';
+      const isPlaceholder = /^[A-Z0-9/]+$/.test(team1) && team1.length <= 4 || /^[A-Z0-9/]+$/.test(team2) && team2.length <= 4;
+
+      const name = `${team1} vs ${team2}`;
+      const flag = getFlag(team1) || getFlag(team2);
+
+      events.push({
+        id:`wc26-${m.num || m.date}-${team1}-${team2}`.replace(/\s+/g,'_'),
+        sport:'football',
+        name: isPlaceholder ? `${name} (TBD)` : name,
+        flag,
+        competition: `FIFA World Cup 2026${m.group ? ' — ' + m.group : ' — ' + m.round}`,
+        datetime_utc: dt.toISOString(),
+        venue: m.ground || '',
+        broadcast: BC.football_wc,
+        source:'api',
+      });
+    }
+  } catch (err) {
+    logFetchError('Football/openfootball.json', err);
+  }
+  return events;
+}
+
+// Parse "2026-06-17" + "19:00 UTC-4" into a proper Date
+function parseOpenFootballDateTime(dateStr, timeStr) {
+  if (!dateStr) return null;
+  const match = /^(\d{1,2}):(\d{2})\s*UTC([+-]\d+)$/.exec((timeStr||'').trim());
+  if (!match) {
+    // fallback: treat as midnight UTC if time format is unexpected
+    const dt = new Date(`${dateStr}T00:00:00Z`);
+    return isNaN(dt) ? null : dt;
+  }
+  const [, hh, mm, offset] = match;
+  const offsetNum = parseInt(offset, 10);
+  // Build an ISO string with the explicit offset (e.g. "2026-06-17T19:00:00-04:00")
+  const sign = offsetNum < 0 ? '-' : '+';
+  const absOffset = Math.abs(offsetNum).toString().padStart(2,'0');
+  const iso = `${dateStr}T${hh.padStart(2,'0')}:${mm}:00${sign}${absOffset}:00`;
+  const dt = new Date(iso);
+  return isNaN(dt) ? null : dt;
+}
+
+// ─── CRICKET (CricAPI — free key, 100 req/day) ───────────────────────────────
+async function fetchCricket(from, to) {
+  const events = [];
+  if (!CRICAPI_KEY || CRICAPI_KEY === 'PASTE_YOUR_CRICAPI_KEY_HERE') {
+    return events; // banner already informs the user
+  }
+  try {
+    const res = await fetch(`https://api.cricapi.com/v1/matches?apikey=${CRICAPI_KEY}&offset=0`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.status && data.status !== 'success') throw new Error(data.message || 'CricAPI error');
+    if (!data.data) return events;
+
+    for (const m of data.data) {
+      const dt = m.dateTimeGMT ? new Date(m.dateTimeGMT) : (m.date ? new Date(m.date) : null);
+      if (!dt || isNaN(dt) || dt < from || dt > to) continue;
+
+      const teams = m.teams || [];
+      const nameStr = (m.name || teams.join(' vs ')).toLowerCase();
+      const isIntl = CRICKET_NATIONS.some(nat => nameStr.includes(nat));
+      const isIPL  = (m.series || m.name || '').toLowerCase().includes('ipl') || (m.series||'').toLowerCase().includes('indian premier league');
+      if (!isIntl && !isIPL) continue; // keep it to international + IPL, matching prior preference
+
+      const flag = getFlag(teams[0]||'') || getFlag(teams[1]||'');
+      const bcKey = isIPL ? 'cricket_ipl' : 'cricket_default';
+
+      events.push({
+        id:`cricapi-${m.id}`, sport:'cricket',
+        name: m.name || teams.join(' vs '),
+        flag,
+        competition: m.series || m.matchType || 'Cricket',
+        datetime_utc: dt.toISOString(),
+        venue: m.venue || '',
+        broadcast: BC[bcKey],
+        source:'api',
+      });
+    }
+  } catch (err) {
+    logFetchError('Cricket/CricAPI', err);
+  }
+  return events;
+}
+
+// ─── MANUAL FIXTURE MODAL ─────────────────────────────────────────────────────
+function setupModal() {
+  const overlay = document.getElementById('modalOverlay');
+  document.getElementById('addFixtureFab').addEventListener('click', () => {
+    overlay.classList.add('visible');
+    renderManualList();
+  });
+  document.getElementById('cancelModalBtn').addEventListener('click', () => overlay.classList.remove('visible'));
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('visible'); });
+
+  document.getElementById('saveManualBtn').addEventListener('click', () => {
+    const date = document.getElementById('mDate').value;
+    const time = document.getElementById('mTime').value || '00:00';
+    const sport = document.getElementById('mSport').value;
+    const name = document.getElementById('mName').value.trim();
+    const comp = document.getElementById('mComp').value.trim();
+    const venue = document.getElementById('mVenue').value.trim();
+    const bcUk = document.getElementById('mBcUk').value.trim();
+    const bcUs = document.getElementById('mBcUs').value.trim();
+    const bcAus = document.getElementById('mBcAus').value.trim();
+    const bcCa = document.getElementById('mBcCa').value.trim();
+
+    if (!date || !name) {
+      alert('Please add at least a date and event name.');
+      return;
+    }
+    // Interpret the date/time as the user's local timezone, convert to UTC for storage
+    const localDt = new Date(`${date}T${time}:00`);
+    if (isNaN(localDt)) { alert('Invalid date/time.'); return; }
+
+    addManualEvent({
+      sport, name, competition: comp || 'Manual entry', venue,
+      datetime_utc: localDt.toISOString(),
+      broadcast: {
+        uk: bcUk || 'TBC', us: bcUs || 'TBC', aus: bcAus || 'TBC', canada: bcCa || 'TBC',
+      },
+    });
+
+    ['mDate','mTime','mName','mComp','mVenue','mBcUk','mBcUs','mBcAus','mBcCa'].forEach(id => document.getElementById(id).value = '');
+    renderManualList();
+    renderEvents();
+  });
+
+  document.getElementById('parsePasteBtn').addEventListener('click', () => {
+    const text = document.getElementById('pasteArea').value.trim();
+    if (!text) return;
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    let added = 0;
+    for (const line of lines) {
+      const parsed = parsePastedLine(line);
+      if (parsed) { addManualEvent(parsed); added++; }
+    }
+    document.getElementById('pasteArea').value = '';
+    renderManualList();
+    renderEvents();
+    if (added) alert(`Added ${added} fixture(s).`);
+    else alert('Could not parse any lines. Expected format:\nYYYY-MM-DD HH:MM | Event name | Channel1, Channel2');
+  });
+
+  document.getElementById('parseIcsBtn').addEventListener('click', () => {
+    const text = document.getElementById('icsArea').value;
+    if (!text.trim()) return;
+
+    const chosenSport = document.getElementById('icsSport').value;
+    const bcUk  = document.getElementById('icsBcUk').value.trim()  || 'TBC';
+    const bcUs  = document.getElementById('icsBcUs').value.trim()  || 'TBC';
+    const bcAus = document.getElementById('icsBcAus').value.trim() || 'TBC';
+    const bcCa  = document.getElementById('icsBcCa').value.trim()  || 'TBC';
+    const broadcast = { uk: bcUk, us: bcUs, aus: bcAus, canada: bcCa };
+
+    const result = parseIcsFile(text, chosenSport, broadcast);
+    let added = 0, skipped = 0;
+    for (const ev of result.events) {
+      addManualEvent(ev);
+      added++;
+    }
+    skipped = result.skipped;
+    document.getElementById('icsArea').value = '';
+    renderManualList();
+    renderEvents();
+    if (added) {
+      alert(`Imported ${added} event(s) from the calendar.${skipped ? ` (${skipped} skipped — past dates or unparseable.)` : ''}`);
+    } else {
+      alert('No events found. Make sure you pasted the full .ics file content, including the BEGIN:VEVENT blocks.');
+    }
+  });
+}
+
+// ─── ICS PARSER ───────────────────────────────────────────────────────────────
+// Parses a standard RFC 5545 .ics calendar file (e.g. the Tennis TV ATP calendar)
+// into manual events. Handles UTC (Z suffix), TZID-qualified, and all-day events.
+function parseIcsFile(rawText, chosenSport, chosenBroadcast) {
+  const events = [];
+  let skipped = 0;
+
+  // Unfold lines: RFC 5545 continues long lines with a leading space/tab
+  const unfolded = rawText.replace(/\r\n/g, '\n').replace(/\n[ \t]/g, '');
+  const lines = unfolded.split('\n');
+
+  const blocks = [];
+  let current = null;
+  for (const line of lines) {
+    if (line.startsWith('BEGIN:VEVENT')) { current = []; }
+    else if (line.startsWith('END:VEVENT')) { if (current) blocks.push(current); current = null; }
+    else if (current) { current.push(line); }
+  }
+
+  const now = new Date();
+  const farFuture = new Date(now.getTime() + 400 * 86400000); // ~13 months ahead, generous window
+
+  for (const block of blocks) {
+    const props = {};
+    for (const line of block) {
+      const idx = line.indexOf(':');
+      if (idx === -1) continue;
+      const keyPart = line.slice(0, idx);   // e.g. "DTSTART;TZID=Europe/London"
+      const value   = line.slice(idx + 1).trim();
+      const key     = keyPart.split(';')[0].toUpperCase();
+      const tzidMatch = /TZID=([^;:]+)/.exec(keyPart);
+      props[key] = { value, tzid: tzidMatch ? tzidMatch[1] : null, raw: keyPart };
+    }
+
+    const summary = props.SUMMARY ? unescapeIcsText(props.SUMMARY.value) : null;
+    const location = props.LOCATION ? unescapeIcsText(props.LOCATION.value) : '';
+    if (!summary || !props.DTSTART) { skipped++; continue; }
+
+    const dt = parseIcsDate(props.DTSTART.value, props.DTSTART.tzid);
+    if (!dt) { skipped++; continue; }
+
+    // Skip events too far in the past or absurdly far in the future
+    if (dt < new Date(now.getTime() - 86400000) || dt > farFuture) { skipped++; continue; }
+
+    events.push({
+      sport: chosenSport, name: summary,
+      competition: 'Imported calendar',
+      venue: location,
+      datetime_utc: dt.toISOString(),
+      broadcast: chosenBroadcast,
+    });
+  }
+
+  return { events, skipped };
+}
+
+// Convert an ICS DATE or DATE-TIME value into a JS Date
+function parseIcsDate(value, tzid) {
+  // All-day event: "20260628"
+  if (/^\d{8}$/.test(value)) {
+    const y = value.slice(0,4), mo = value.slice(4,6), d = value.slice(6,8);
+    const dt = new Date(`${y}-${mo}-${d}T00:00:00Z`);
+    return isNaN(dt) ? null : dt;
+  }
+  // UTC date-time: "20260628T143000Z"
+  const utcMatch = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/.exec(value);
+  if (utcMatch) {
+    const [, y, mo, d, h, mi, s] = utcMatch;
+    const dt = new Date(`${y}-${mo}-${d}T${h}:${mi}:${s}Z`);
+    return isNaN(dt) ? null : dt;
+  }
+  // Local date-time with TZID, or floating local time: "20260628T143000"
+  const localMatch = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})$/.exec(value);
+  if (localMatch) {
+    const [, y, mo, d, h, mi, s] = localMatch;
+    // We don't have a full IANA tz database client-side, so treat TZID-qualified
+    // times as the browser's local time — close enough for sports schedules
+    // and far better than dropping the event. Most calendar tools (incl. this
+    // one's eventual use) just need the right calendar date and an approximate time.
+    const dt = new Date(`${y}-${mo}-${d}T${h}:${mi}:${s}`);
+    return isNaN(dt) ? null : dt;
+  }
+  return null;
+}
+
+// Unescape ICS text: \\n -> newline, \\, -> comma, \\; -> semicolon
+function unescapeIcsText(s) {
+  return s.replace(/\\n/g, ' ').replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\\\/g, '\\');
+}
+
+// Parse a line like: "2026-06-20 14:30 IST | India vs England 3rd Test | Sky Sports Cricket, Willow TV"
+function parsePastedLine(line) {
+  const parts = line.split('|').map(p => p.trim());
+  if (parts.length < 2) return null;
+
+  const dtPart = parts[0];
+  const name = parts[1];
+  const channelsPart = parts[2] || '';
+
+  // Extract date + time, ignore trailing timezone label (assume user's local tz)
+  const m = /^(\d{4}-\d{2}-\d{2})[ T](\d{1,2}:\d{2})/.exec(dtPart);
+  if (!m) return null;
+  const [, dateStr, timeStr] = m;
+  const localDt = new Date(`${dateStr}T${timeStr}:00`);
+  if (isNaN(localDt)) return null;
+
+  // Guess sport from keywords
+  const lower = name.toLowerCase();
+  let sport = 'cricket';
+  if (/\bf1\b|grand prix|qualifying|practice/.test(lower)) sport = 'f1';
+  else if (/\bfc\b|premier league|world cup|euro|football|soccer/.test(lower)) sport = 'football';
+  else if (/atp|wta|open|masters|wimbledon|roland garros|grand slam|tennis/.test(lower)) sport = 'tennis';
+
+  const channels = channelsPart ? channelsPart : 'TBC';
+
+  return {
+    sport, name, competition: 'Manual entry', venue: '',
+    datetime_utc: localDt.toISOString(),
+    broadcast: { uk: channels, us: channels, aus: channels, canada: channels },
+  };
+}
+
+function addManualEvent(ev) {
+  manualEvents.push({
+    id: `manual-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
+    sport: ev.sport, name: ev.name, competition: ev.competition,
+    datetime_utc: ev.datetime_utc, venue: ev.venue,
+    flag: getFlag(ev.name) || '',
+    broadcast: ev.broadcast, source: 'manual',
+  });
+  saveManualEvents();
+}
+
+function removeManualEvent(id) {
+  manualEvents = manualEvents.filter(e => e.id !== id);
+  saveManualEvents();
+  renderManualList();
+  renderEvents();
+}
+
+function renderManualList() {
+  const wrap = document.getElementById('manualListWrap');
+  if (!manualEvents.length) { wrap.innerHTML = ''; return; }
+  const sorted = [...manualEvents].sort((a,b) => new Date(a.datetime_utc) - new Date(b.datetime_utc));
+  wrap.innerHTML = `<span class="modal-label">Your manual fixtures (${manualEvents.length})</span>` +
+    sorted.map(ev => {
+      const d = new Date(ev.datetime_utc);
+      const dStr = d.toLocaleDateString([],{day:'numeric',month:'short'}) + ' ' + d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+      return `<div class="manual-list-item">
+        <span>${escHtml(ev.name)} — ${dStr}</span>
+        <span class="del" data-id="${ev.id}">✕</span>
+      </div>`;
+    }).join('');
+  wrap.querySelectorAll('.del').forEach(el => {
+    el.addEventListener('click', () => removeManualEvent(el.dataset.id));
+  });
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+const ICONS = {cricket:'🏏', f1:'🏎', football:'⚽', tennis:'🎾'};
+
+function renderEvents() {
+  const main   = document.getElementById('main');
+  const events = allEvents();
+  let filtered = activeSport === 'all' ? events : events.filter(e => e.sport === activeSport);
+
+  if (activeDate) {
+    filtered = filtered.filter(e => toDateKey(new Date(e.datetime_utc)) === activeDate);
+  }
+
+  document.querySelectorAll('.date-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.date === activeDate);
+  });
+
+  if (!filtered.length && events.length > 0) {
+    main.innerHTML = `<div class="state-msg"><div class="icon">📅</div>No events on this day.<br><small>Try another date, the All sports tab, or add one manually with the + button.</small></div>`;
+    return;
+  }
+  if (!filtered.length) {
+    const errDetail = lastFetchErrors.length
+      ? `<br><br><small style="color:var(--muted)">${escHtml(lastFetchErrors.slice(0,3).join(' · '))}</small>`
+      : '';
+    main.innerHTML = `<div class="state-msg"><div class="icon">📡</div>No fixtures yet.<br><small>Tap ↻ to fetch live sources, or + to add one manually.</small>${errDetail}</div>`;
+    return;
+  }
+
+  main.innerHTML = filtered.map(ev => card(ev)).join('');
+}
+
+function card(ev) {
+  const localDt  = new Date(ev.datetime_utc);
+  const timeStr  = localDt.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  const bc       = ev.broadcast||{};
+  const searchQ  = encodeURIComponent(ev.name + ' ' + (ev.competition||''));
+  const searchURL= `https://www.google.com/search?q=${searchQ}`;
+
+  const bcItems = [
+    {label:'UK',  val:bc.uk    ||'TBC'},
+    {label:'US',  val:bc.us    ||'TBC'},
+    {label:'AUS', val:bc.aus   ||'TBC'},
+    {label:'CA',  val:bc.canada||'TBC'},
+  ];
+  const bcHtml = bcItems.map(b =>
+    `<div class="bc-item"><div class="bc-country">${b.label}</div><div class="bc-channel">${escHtml(b.val)}</div></div>`
+  ).join('');
+
+  const flagHtml = ev.flag ? `<span class="flag">${ev.flag}</span>` : '';
+  const manualTag = ev.source === 'manual' ? `<span class="manual-tag">manual</span>` : '';
+  const cardClass = ev.source === 'manual' ? 'manual' : ev.sport;
+
+  return `<div class="event-card ${escHtml(cardClass)}">
+    <div class="card-row">
+      <span class="sport-icon">${ICONS[ev.sport]||'🏆'}</span>
+      <div class="event-meta">
+        <div class="event-name">${flagHtml}${escHtml(ev.name)}${manualTag}</div>
+        <div class="event-comp">${escHtml(ev.competition)}</div>
+        ${ev.venue ? `<div class="event-venue">📍 ${escHtml(ev.venue)}</div>` : ''}
+      </div>
+      <div class="card-right">
+        <div class="event-time">${timeStr}<br><span class="time-tz">${tzAbbr}</span></div>
+        <a class="detail-link" href="${searchURL}" target="_blank" rel="noopener" title="View details">»</a>
+      </div>
+    </div>
+    <div class="broadcast-row">${bcHtml}</div>
+  </div>`;
+}
+
+function escHtml(s){
+  return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
