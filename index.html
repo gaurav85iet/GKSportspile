@@ -268,6 +268,8 @@ const tzAbbr = (() => {
 document.getElementById('tzBadge').textContent = tzAbbr;
 
 // ─── BROADCAST CHANNELS (hardcoded defaults; manual entries can override) ───
+const ICONS = {cricket:'🏏', f1:'🏎', football:'⚽', tennis:'🎾'};
+
 const BC = {
   cricket_default:  {uk:'Sky Sports Cricket', us:'Willow TV', aus:'Fox Cricket / Channel 9', canada:'Willow TV'},
   cricket_ipl:       {uk:'Sky Sports Cricket', us:'JioCinema', aus:'Fox Cricket', canada:'N/A'},
@@ -1048,7 +1050,6 @@ function removeSyncedCalendar(idx) {
 }
 
 // ─── RENDER ───────────────────────────────────────────────────────────────────
-const ICONS = {cricket:'🏏', f1:'🏎', football:'⚽', tennis:'🎾'};
 
 function renderEvents() {
   const main   = document.getElementById('main');
