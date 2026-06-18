@@ -1022,10 +1022,13 @@ function renderManualList() {
     const sorted = [...manualEvents].sort((a,b) => new Date(a.datetime_utc) - new Date(b.datetime_utc));
     html += sorted.map(ev => {
       const d = new Date(ev.datetime_utc);
-      const dStr = d.toLocaleDateString([],{day:'numeric',month:'short'}) + ' ' + d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+      const isValid = !isNaN(d);
+      const dStr = isValid
+        ? (d.toLocaleDateString([],{day:'numeric',month:'short',year:'numeric'}) + ' ' + d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}))
+        : `⚠️ INVALID DATE (raw: ${escHtml(ev.datetime_utc)})`;
       const tag = ev.syncedFrom ? ' (synced)' : '';
       return `<div class="manual-list-item">
-        <span>${escHtml(ev.name)} — ${dStr}${tag}</span>
+        <span>${escHtml(ev.sport)} · ${escHtml(ev.name)} — ${dStr}${tag}</span>
         <span class="del" data-id="${ev.id}">✕</span>
       </div>`;
     }).join('');
