@@ -532,7 +532,10 @@ async function syncOneCalendar({ url, sport, broadcast }) {
   const res = await fetch(proxied);
   if (!res.ok) {
     const errBody = await res.json().catch(() => ({}));
-    throw new Error(errBody.error || `Proxy returned ${res.status}`);
+    const parts = [errBody.error || `Proxy returned ${res.status}`];
+    if (errBody.detail) parts.push(errBody.detail);
+    if (errBody.hint) parts.push(errBody.hint);
+    throw new Error(parts.join(' — '));
   }
   const icsText = await res.text();
   const result = parseIcsFile(icsText, sport, broadcast);
